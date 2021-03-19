@@ -1,2 +1,3 @@
 node_modules
 prisma
+src/utils.js

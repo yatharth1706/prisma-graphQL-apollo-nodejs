@@ -1,60 +1,33 @@
+const fs = require('fs')
+const path = require('path')
+const { getUserId } = require('./utils')
 const { ApolloServer } = require('apollo-server')
 const { PrismaClient  } = require('@prisma/client')
+const Query = require('./resolvers/Query')
+const Mutation = require('./resolvers/Mutation')
+const User = require('./resolvers/User')
+const Link = require('./resolvers/Link')
 
 const prisma = new PrismaClient()
 
-const typeDefs = `
-    type Query {
-        info : String!
-        feed : [Link!]!
-    }
-
-    type Mutation {
-        post(url : String!, description : String!) : Link! 
-    }
-
-    type Link {
-        id : ID!
-        description : String!
-        url : String!
-    }
-`
-
-const links = [
-    {
-        id : "1010",
-        description : "How to make a graphQL server ?",
-        url : "www.howtographQL.com"
-    }
-]
-
-let idCount = links.length
-
 const resolvers = {
-    Query : {
-        info : () => `Hackernews API`,
-        feed : async (parent, args, context) => {
-           return context.prisma.link.findMany()
-        } 
-    },
-    Mutation : {
-        post : (parent, args, context) => {
-            const link = context.prisma.link.create({
-                data : {
-                    url : args.url,
-                    description : args.description
-                }
-            })
-            return link
-        }
-    }
+    Query,
+    Mutation,
+    User,
+    Link
 }
 
 const server = new ApolloServer({
-    typeDefs,
+    typeDefs : fs.readFileSync(
+        path.join(__dirname, 'schema.graphql'),'utf8'
+    ),
     resolvers,
-    context : {
-        prisma
+    context : ({req}) => {
+        return {
+            ...req,
+            prisma,
+            userId : req && req.headers.authorization ? getUserId(req) : null
+        }
     }
 })
 
